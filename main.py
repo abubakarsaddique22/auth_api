@@ -45,6 +45,8 @@ def get_db():
     )
 
 
+SECRET_KEY = os.getenv("SECRET_KEY", "fallback_secret")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
 
 
 # ---------------- UTILS ----------------
