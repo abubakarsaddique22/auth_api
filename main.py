@@ -25,15 +25,27 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 # Load .env variables into environment
-load_dotenv()
-# Database connection
+# load_dotenv()
+# # Database connection
+# def get_db():
+#     return mysql.connector.connect(
+#         host=os.getenv("DB_HOST"),
+#         user=os.getenv("DB_USER"),
+#         password=os.getenv("DB_PASS"),
+#         database=os.getenv("DB_NAME")
+#     )
+
 def get_db():
     return mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASS"),
-        database=os.getenv("DB_NAME")
+        host=os.getenv("MYSQL_HOST"),
+        user=os.getenv("MYSQL_USER"),
+        password=os.getenv("MYSQL_ROOT_PASSWORD"),
+        database=os.getenv("MYSQL_DATABASE"),
+        port=int(os.getenv("MYSQL_PORT"))
     )
+
+
+
 
 # ---------------- UTILS ----------------
 def hash_password(password: str):
