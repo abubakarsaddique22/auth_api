@@ -44,32 +44,94 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 #         port=int(os.getenv("MYSQL_PORT"))
 #     )
 
-def get_db():
-    # Get the full MySQL URL from environment
-    mysql_url = os.getenv("MYSQL_URL")
+# Add these imports at the top
+import logging
+
+# Add logging configuration
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Add these endpoints after your existing endpoints but before the if __name__ block
+
+@app.get("/test-db")
+def test_db_connection():
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute("SELECT 1")
+        result = cursor.fetchone()
+        cursor.close()
+        db.close()
+        return {"database_status": "connected", "result": result}
+    except Exception as e:
+        logger.error(f"Database connection error: {e}")
+        return {"database_status": "error", "error": str(e)}
+
+@app.post("/init-db")
+def initialize_database():
+    db = get_db()
+    cursor = db.cursor()
     
-    if mysql_url:
-        # Parse the URL: mysql://user:pass@host:port/dbname
-        import re
-        match = re.match(r'mysql://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)', mysql_url)
-        if match:
-            user, password, host, port, database = match.groups()
-            return mysql.connector.connect(
-                host=host,
-                user=user,
-                password=password,
-                database=database,
-                port=int(port)
+    try:
+        # Create users table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                password VARCHAR(200) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-    
-    # Fallback to individual variables
-    return mysql.connector.connect(
-        host=os.getenv("MYSQLHOST", "localhost"),
-        user=os.getenv("MYSQLUSER", "root"),
-        password=os.getenv("MYSQLPASSWORD", ""),
-        database=os.getenv("MYSQLDATABASE", "authdb"),
-        port=int(os.getenv("MYSQLPORT", 3306))
-    )
+        """)
+        db.commit()
+        return {"message": "Database tables created successfully"}
+    except Exception as e:
+        logger.error(f"Database initialization error: {e}")
+        return {"error": str(e)}
+    finally:
+        cursor.close()
+        db.close()
+
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the Auth API"}
+
+# Also update your get_db function to add better error handling
+def get_db():
+    try:
+        # Get the full MySQL URL from environment
+        mysql_url = os.getenv("MYSQL_URL")
+        
+        if mysql_url:
+            # Parse the URL: mysql://user:pass@host:port/dbname
+            import re
+            match = re.match(r'mysql://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)', mysql_url)
+            if match:
+                user, password, host, port, database = match.groups()
+                conn = mysql.connector.connect(
+                    host=host,
+                    user=user,
+                    password=password,
+                    database=database,
+                    port=int(port)
+                )
+                logger.info("Connected via MYSQL_URL")
+                return conn
+        
+        # Fallback to individual variables (Railway provides these)
+        conn = mysql.connector.connect(
+            host=os.getenv("MYSQLHOST", "localhost"),
+            user=os.getenv("MYSQLUSER", "root"),
+            password=os.getenv("MYSQLPASSWORD", ""),
+            database=os.getenv("MYSQLDATABASE", "authdb"),
+            port=int(os.getenv("MYSQLPORT", 3306))
+        )
+        logger.info("Connected via individual MySQL variables")
+        return conn
+        
+    except Exception as e:
+        logger.error(f"Database connection failed: {e}")
+        raise e
 
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback_secret")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
