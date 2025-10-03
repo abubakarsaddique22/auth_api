@@ -96,13 +96,12 @@ def initialize_database():
 def read_root():
     return {"message": "Welcome to the Auth API"}
 
-# Also update your get_db function to add better error handling
 def get_db():
     try:
-        # Get the full MySQL URL from environment
-        mysql_url = os.getenv("MYSQL_URL")
+        # Try Railway's MySQL URL first
+        mysql_url = os.getenv("DATABASE_URL") or os.getenv("MYSQL_URL")
         
-        if mysql_url:
+        if mysql_url and "mysql://" in mysql_url:
             # Parse the URL: mysql://user:pass@host:port/dbname
             import re
             match = re.match(r'mysql://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)', mysql_url)
@@ -115,10 +114,10 @@ def get_db():
                     database=database,
                     port=int(port)
                 )
-                logger.info("Connected via MYSQL_URL")
+                logger.info("Connected via MySQL URL")
                 return conn
         
-        # Fallback to individual variables (Railway provides these)
+        # Try individual Railway MySQL variables
         conn = mysql.connector.connect(
             host=os.getenv("MYSQLHOST", "localhost"),
             user=os.getenv("MYSQLUSER", "root"),
@@ -132,6 +131,7 @@ def get_db():
     except Exception as e:
         logger.error(f"Database connection failed: {e}")
         raise e
+
 
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback_secret")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
