@@ -35,15 +35,41 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 #         database=os.getenv("DB_NAME")
 #     )
 
-def get_db():
-    return mysql.connector.connect(
-        host=os.getenv("MYSQL_HOST"),
-        user=os.getenv("MYSQL_USER"),
-        password=os.getenv("MYSQL_ROOT_PASSWORD"),
-        database=os.getenv("MYSQL_DATABASE"),
-        port=int(os.getenv("MYSQL_PORT"))
-    )
+# def get_db():
+#     return mysql.connector.connect(
+#         host=os.getenv("MYSQL_HOST"),
+#         user=os.getenv("MYSQL_USER"),
+#         password=os.getenv("MYSQL_ROOT_PASSWORD"),
+#         database=os.getenv("MYSQL_DATABASE"),
+#         port=int(os.getenv("MYSQL_PORT"))
+#     )
 
+def get_db():
+    # Get the full MySQL URL from environment
+    mysql_url = os.getenv("MYSQL_URL")
+    
+    if mysql_url:
+        # Parse the URL: mysql://user:pass@host:port/dbname
+        import re
+        match = re.match(r'mysql://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)', mysql_url)
+        if match:
+            user, password, host, port, database = match.groups()
+            return mysql.connector.connect(
+                host=host,
+                user=user,
+                password=password,
+                database=database,
+                port=int(port)
+            )
+    
+    # Fallback to individual variables
+    return mysql.connector.connect(
+        host=os.getenv("MYSQLHOST", "localhost"),
+        user=os.getenv("MYSQLUSER", "root"),
+        password=os.getenv("MYSQLPASSWORD", ""),
+        database=os.getenv("MYSQLDATABASE", "authdb"),
+        port=int(os.getenv("MYSQLPORT", 3306))
+    )
 
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback_secret")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
